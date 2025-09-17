@@ -1,27 +1,36 @@
-from typing import Union
-
 from fastapi import FastAPI
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from typing import Literal
+import time
+import logging
 
-app = FastAPI()
+logging.basicConfig(level=logging.INFO)
 
-
-class Item(BaseModel):
-    name: str
-    price: float
-    is_offer: Union[bool, None] = None
-
-
-@app.get("/")
-def read_root():
-    return {"Hello": "World"}
+app = FastAPI(title="Data Streamer", version="0.1.0")
 
 
-@app.get("/items/{item_id}")
-def read_item(item_id: int, q: Union[str, None] = None):
-    return {"item_id": item_id, "q": q}
+# Define schema for telemetry data
+class TelemetryEvent(BaseModel):
+    device_id: str = Field(..., example="sensor-001")  # type: ignore[no-matching-overload]
+    metric: Literal["temperature", "voltage", "humidity", "status"] = Field(
+        ..., example="temperature"
+    )  # type: ignore[no-matching-overload]
+    value: float = Field(..., example=72.5)  # type: ignore[no-matching-overload]
+    timestamp: float = Field(default_factory=lambda: time.time())
 
 
-@app.put("/items/{item_id}")
-def update_item(item_id: int, item: Item):
-    return {"item_name": item.name, "item_id": item_id}
+@app.post("/metrics")
+async def ingest_metric(event: TelemetryEvent):
+    """
+    Ingest a telemetry event. Right now it just logs the event; later this will publish to Kafka.
+    """
+    logging.info(f"Received event: {event.model_dump()}")
+    return {"status": "ok", "event": event.model_dump()}
+
+
+@app.get("/health")
+async def health_check():
+    """
+    Simple health check endpoint.
+    """
+    return {"status": "healthy"}
