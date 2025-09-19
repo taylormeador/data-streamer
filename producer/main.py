@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from confluent_kafka import Producer, Consumer
+from confluent_kafka import Producer
 from pydantic import BaseModel, Field
 from typing import Literal
 import time
@@ -44,7 +44,7 @@ def delivery_report(err, msg):
 @app.post("/ingest")
 async def ingest_metric(event: TelemetryEvent):
     """
-    Ingest a telemetry event. Right now it just logs the event; later this will publish to Kafka.
+    Ingests a telemetry event and publishes to Kafka.
     """
     logging.info(f"Received event: {event.model_dump()}")
 
