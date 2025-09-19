@@ -18,9 +18,9 @@ services:
       KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
       CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
 
-  ingestion_api:
-    build: ./ingestion_api
-    container_name: ingestion-api-service
+  api:
+    build: ./api
+    container_name: api-service
     depends_on:
       - kafka
     environment:
