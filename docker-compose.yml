@@ -18,12 +18,22 @@ services:
       KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
       CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
 
-  api:
-    build: ./api
-    container_name: api-service
+  producer:
+    build: ./producer
+    container_name: producer-service
     depends_on:
       - kafka
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
     ports:
       - "8000:8000"
+
+  consumer:
+    build: ./consumer
+    container_name: consumer-service
+    depends_on:
+      - kafka
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    ports:
+      - "8001:8001"
