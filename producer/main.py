@@ -1,11 +1,12 @@
 from fastapi import FastAPI
 from confluent_kafka import Producer
 from pydantic import BaseModel, Field
-from typing import Literal
+from typing import Literal, Optional
 import time
 import logging
 import os
 import socket
+import uuid
 
 
 logging.basicConfig(level=logging.INFO)
@@ -30,6 +31,11 @@ class TelemetryEvent(BaseModel):
     )  # type: ignore[no-matching-overload]
     value: float = Field(..., example=72.5)  # type: ignore[no-matching-overload]
     timestamp: float = Field(default_factory=lambda: time.time())
+    location: Optional[str] = Field(None, example="warehouse-a")  # type: ignore[no-matching-overload]
+
+    # Fields added during processing (will be None from client)
+    message_id: Optional[str] = Field(None)
+    ingestion_timestamp: Optional[float] = Field(None)
 
 
 def delivery_report(err, msg):
@@ -46,17 +52,28 @@ async def ingest_metric(event: TelemetryEvent):
     """
     Ingests a telemetry event and publishes to Kafka.
     """
-    logging.info(f"Received event: {event.model_dump()}")
+    # Add minimal enrichment to create some CPU work
+    enriched_event = event.model_copy()
+    enriched_event.message_id = str(uuid.uuid4())  # Add this field to the model
+    enriched_event.ingestion_timestamp = time.time()
+
+    # Simple validation logic
+    if event.metric == "temperature" and (event.value < -50 or event.value > 150):
+        logging.warning(
+            f"Suspicious temperature reading: {event.value}"
+        )  # TODO real time monitoring/alerting
+
+    logging.info(f"Received event: {enriched_event.model_dump()}")
 
     producer.produce(
         TOPIC,
         key=event.device_id,
-        value=event.model_dump_json(),
+        value=enriched_event.model_dump_json(),
         callback=delivery_report,
     )
     producer.flush()
 
-    return {"status": "ok", "event": event.model_dump()}
+    return {"status": "ok", "message_id": enriched_event.message_id}
 
 
 @app.get("/health")
