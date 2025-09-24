@@ -21,6 +21,7 @@ Over time, additional services will be introduced and existing ones scaled horiz
 - **v1 (TBD)** — Database integration (Postgres) for persistence. Consumer API writes metrics + anomalies to DB with defined schema. REST API for querying historical data.
 - **v2 (TBD)** — Visualization layer (Grafana). Enhanced anomaly detection. Alerting/notification system.
 - **v3 (TBD)** — Scalable deployment. Multiple consumer groups + partitioning for high throughput.
+- **v4 (TBD)** — Rewrite APIs in Go.
 
 ---
 
