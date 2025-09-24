@@ -33,6 +33,25 @@ services:
       timeout: 5s
       retries: 5
 
+  postgres:
+    image: postgres:15
+    container_name: postgres-db
+    environment:
+      POSTGRES_DB: iot_platform
+      POSTGRES_USER: iot_user
+      POSTGRES_PASSWORD: iot_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./db/init.sql:/docker-entrypoint-initdb.d/01-init.sql  # Auto-runs on startup
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+    tmpfs:
+      - /var/lib/postgresql/data:rw,noexec,nosuid,size=200m
+
   producer:
     build: ./producer
     container_name: producer-service
@@ -62,6 +81,7 @@ services:
     container_name: consumer-service
     depends_on:
       - kafka
+      - postgres
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
     ports:
