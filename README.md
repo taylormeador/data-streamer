@@ -11,13 +11,13 @@ Over time, additional services will be introduced and existing ones scaled horiz
 
 | Date     | Architecture Diagram | Performance Results |
 |----------|----------------------|---------------------|
-| TBD      | [v0 Architecture](#v0-architecture-diagram) | [v0 Results](#v0-performance-results) · [JSON](/performance/v0_results.json) |
+| 9-24-25  | [v0 Architecture](#v0-architecture-diagram) | [v0 Results](#v0-performance-results) · [JSON](/performance/v0_results.json) |
 
 ---
 
 ### Changelog
 
-- **v0 (TBD)** — Initial version. Producer API → Kafka → Consumer API. No database. Simple, in-memory real-time metrics + anomaly detection.  
+- **v0 (9-24-25)** — Initial version. Producer API → Kafka → Consumer API. No database. Simple, in-memory real-time metrics + anomaly detection.  
 - **v1 (TBD)** — Database integration (Postgres) for persistence. Consumer API writes metrics + anomalies to DB with defined schema. REST API for querying historical data.
 - **v2 (TBD)** — Visualization layer (Grafana). Enhanced anomaly detection. Alerting/notification system.
 - **v3 (TBD)** — Scalable deployment. Multiple consumer groups + partitioning for high throughput.
