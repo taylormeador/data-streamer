@@ -111,7 +111,9 @@ async def send_single_request(
         }
 
 
-async def run_load_test(config: BenchmarkConfig) -> BenchmarkResults:
+async def run_load_test(
+    config: BenchmarkConfig, store_result: bool = True
+) -> BenchmarkResults:
     """Execute the benchmark test"""
     global current_benchmark
 
@@ -197,7 +199,10 @@ async def run_load_test(config: BenchmarkConfig) -> BenchmarkResults:
         )
 
         current_benchmark = None
-        benchmark_results.append(benchmark_result)
+
+        # Only store individual results if store_result is True
+        if store_result:
+            benchmark_results.append(benchmark_result)
 
         return benchmark_result
 
@@ -285,13 +290,132 @@ async def system_health_check(config: BenchmarkConfig):
     }
 
 
-@app.delete("/benchmark-results")
-async def clear_benchmark_results():
-    """Clear all stored benchmark results"""
-    global benchmark_results
-    count = len(benchmark_results)
-    benchmark_results.clear()
-    return {"message": f"Cleared {count} benchmark results"}
+@app.get("/benchmark-summary")
+async def get_benchmark_summary():
+    """Get benchmark results in a table-friendly format"""
+    summary = []
+    processed_timestamps = set()  # Track timestamps to avoid duplicates
+
+    for result in benchmark_results:
+        if hasattr(result, "model_dump"):
+            # Individual benchmark result
+            r = result.model_dump()
+            timestamp = r["timestamp"]
+
+            # Skip if we already processed this timestamp as part of a suite
+            if timestamp in processed_timestamps:
+                continue
+
+            summary.append(
+                {
+                    "test_name": "individual",
+                    "timestamp": time.strftime(
+                        "%Y-%m-%d %H:%M", time.localtime(timestamp)
+                    ),
+                    "target_rps": r["config"]["target_rps"],
+                    "actual_rps": round(r["actual_rps"], 1),
+                    "p99_latency_ms": round(r["latency_p99"], 1),
+                    "error_rate": f"{r['error_rate']:.1%}",
+                    "duration_s": round(r["duration_seconds"], 1),
+                }
+            )
+
+        elif "suite_name" in result:
+            # Suite results - prefer these over individual results
+            for test in result.get("tests", []):
+                timestamp = test["timestamp"]
+                processed_timestamps.add(timestamp)  # Mark as processed
+
+                summary.append(
+                    {
+                        "test_name": test.get("test_name", "suite"),
+                        "timestamp": time.strftime(
+                            "%Y-%m-%d %H:%M", time.localtime(timestamp)
+                        ),
+                        "target_rps": test["config"]["target_rps"],
+                        "actual_rps": round(test["actual_rps"], 1),
+                        "p99_latency_ms": round(test["latency_p99"], 1),
+                        "error_rate": f"{test['error_rate']:.1%}",
+                        "duration_s": round(test["duration_seconds"], 1),
+                    }
+                )
+
+        elif "test_name" in result and result["test_name"] == "throughput_ceiling":
+            # Throughput ceiling results - prefer these over individual results
+            for test in result.get("tests", []):
+                timestamp = test["timestamp"]
+                processed_timestamps.add(timestamp)  # Mark as processed
+
+                summary.append(
+                    {
+                        "test_name": "ceiling",
+                        "timestamp": time.strftime(
+                            "%Y-%m-%d %H:%M", time.localtime(timestamp)
+                        ),
+                        "target_rps": test["test_rps"],
+                        "actual_rps": round(test["actual_rps"], 1),
+                        "p99_latency_ms": round(test["latency_p99"], 1),
+                        "error_rate": f"{test['error_rate']:.1%}",
+                        "duration_s": round(test["duration_seconds"], 1),
+                    }
+                )
+
+    # Sort by timestamp to show chronological order
+    summary.sort(key=lambda x: x["timestamp"])
+
+    return {"benchmark_summary": summary}
+
+
+@app.get("/benchmark-markdown")
+async def get_benchmark_markdown():
+    """Get benchmark results formatted as markdown table"""
+    summary_response = await get_benchmark_summary()
+    summary = summary_response["benchmark_summary"]
+
+    if not summary:
+        return {"markdown": "No benchmark results available."}
+
+    # Generate markdown table with proper line breaks
+    lines = [
+        "## Benchmark Results",
+        "",
+        "| Test Type | Date/Time | Target RPS | Actual RPS | P99 Latency (ms) | Error Rate | Duration (s) |",
+        "|-----------|-----------|------------|------------|------------------|------------|-------------|",
+    ]
+
+    for row in summary:
+        lines.append(
+            f"| {row['test_name']} | {row['timestamp']} | {row['target_rps']} | {row['actual_rps']} | {row['p99_latency_ms']} | {row['error_rate']} | {row['duration_s']} |"
+        )
+
+    return {"markdown": "\n".join(lines)}
+
+
+@app.get("/benchmark-markdown-raw")
+async def get_benchmark_markdown_raw():
+    """Get benchmark results as raw text for direct copy-paste"""
+    from fastapi.responses import PlainTextResponse
+
+    summary_response = await get_benchmark_summary()
+    summary = summary_response["benchmark_summary"]
+
+    if not summary:
+        return PlainTextResponse("No benchmark results available.")
+
+    # Generate markdown table with proper line breaks
+    lines = [
+        "## Benchmark Results",
+        "",
+        "| Test Type | Date/Time | Target RPS | Actual RPS | P99 Latency (ms) | Error Rate | Duration (s) |",
+        "|-----------|-----------|------------|------------|------------------|------------|-------------|",
+    ]
+
+    for row in summary:
+        lines.append(
+            f"| {row['test_name']} | {row['timestamp']} | {row['target_rps']} | {row['actual_rps']} | {row['p99_latency_ms']} | {row['error_rate']} | {row['duration_s']} |"
+        )
+
+    return PlainTextResponse("\n".join(lines))
 
 
 @app.get("/health")
@@ -336,7 +460,9 @@ async def run_baseline_suite(background_tasks: BackgroundTasks):
 
         for test_name, config in configs:
             logging.info(f"Running {test_name} test...")
-            result = await run_load_test(config)
+            result = await run_load_test(
+                config, store_result=False
+            )  # Don't store individual results
             result_dict = result.model_dump()
             result_dict["test_name"] = test_name
             suite_results.append(result_dict)
@@ -403,7 +529,9 @@ async def find_throughput_ceiling(
             )
 
             logging.info(f"Testing {current_rps} RPS...")
-            result = await run_load_test(config)
+            result = await run_load_test(
+                config, store_result=False
+            )  # Don't store individual results
             result_dict = result.model_dump()
             result_dict["test_rps"] = current_rps
             ceiling_results.append(result_dict)
