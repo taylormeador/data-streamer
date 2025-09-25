@@ -49,8 +49,6 @@ services:
         limits:
           cpus: '1.0'
           memory: 512M
-    tmpfs:
-      - /var/lib/postgresql/data:rw,noexec,nosuid,size=200m
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U iot_user -d iot_platform"]
       interval: 5s
