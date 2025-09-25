@@ -506,7 +506,7 @@ async def quick_benchmark():
 @app.post("/throughput-ceiling")
 async def find_throughput_ceiling(
     background_tasks: BackgroundTasks,
-    start_rps: int = 50,
+    start_rps: int = 200,
     step_rps: int = 50,
     max_error_rate: float = 0.05,
 ):
