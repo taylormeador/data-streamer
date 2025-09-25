@@ -1,10 +1,6 @@
 # Real-Time IoT Device Data Streaming Platform
 
-This project is a prototype of a distributed, high-throughput data streaming platform for IoT device data.  
-
-The goal is not to build a production-ready system, but to explore how distributed architectures evolve as they scale. Each iteration introduces new features, realistic business logic, and simulated product requirements. As the system grows more complex, I’ll benchmark performance, document results, and use the findings to identify bottlenecks and experiment with optimizations.
-
-Over time, additional services will be introduced and existing ones scaled horizontally, while resource usage per service will remain consistent through fixed limits in Docker Compose. The focus is on understanding how distributed systems behave under load, how design trade-offs emerge, and how architectures adapt across the lifecycle of a project.
+This project is a learning-focused exploration of distributed systems architecture using an IoT data streaming platform as the foundation. The primary goal is gaining hands-on experience with modern backend technologies including Kafka, Redis, PostgreSQL, and containerized microservices.
 
 
 ### Timeline
@@ -12,13 +8,14 @@ Over time, additional services will be introduced and existing ones scaled horiz
 | Date     | Architecture Diagram | Performance Results |
 |----------|----------------------|---------------------|
 | 9-24-25  | [v0 Architecture](#v0-architecture-diagram) | [v0 Results](#v0-performance-results) · [JSON](/performance/v0_results.json) |
+| 9-25-25  | [v1 Architecture](#v1-architecture-diagram) | [v1 Results](#v1-performance-results) · [JSON](/performance/v1_results.json) |
 
 ---
 
 ### Changelog
 
 - **v0 (9-24-25)** — Initial version. Producer API → Kafka → Consumer API. No database. Simple, in-memory real-time metrics + anomaly detection.  
-- **v1 (TBD)** — Database integration (Postgres) for persistence. Consumer API writes metrics + anomalies to DB with defined schema. REST API for querying historical data.
+- **v1 (9-25-25)** — Database integration (Postgres) for persistence. Consumer API writes metrics + anomalies to DB with defined schema. Serving analytics endpoints from db queries instead of in-memory data structures.
 - **v2 (TBD)** — Visualization layer (Grafana). Enhanced anomaly detection. Alerting/notification system.
 - **v3 (TBD)** — Scalable deployment. Multiple consumer groups + partitioning for high throughput.
 - **v4 (TBD)** — Rewrite APIs in Go.
@@ -29,87 +26,18 @@ Over time, additional services will be introduced and existing ones scaled horiz
 
 #### v0 Architecture Diagram
 
-```mermaid
-graph TB
-    %% External layer
-    IoT[🌡️ IoT Devices<br/>Simulated Load Generator] 
-    
-    %% API Gateway layer
-    subgraph "Ingestion Layer"
-        Producer[📥 Producer API<br/>FastAPI<br/>:8000<br/>POST /ingest]
-    end
-    
-    %% Message Queue layer
-    subgraph "Message Streaming"
-        Kafka[📨 Apache Kafka<br/>Topic: iot-sensor-data<br/>:9092]
-    end
-    
-    %% Processing layer
-    subgraph "Processing Layer"
-        Consumer[⚙️ Consumer API<br/>FastAPI<br/>:8001<br/>Background Thread]
-        
-        subgraph "In-Memory Storage"
-            Cache[💾 Message Cache<br/>Last 100 messages]
-            Stats[📊 Device Stats<br/>DEVICE_STATS dict<br/>• Running averages<br/>• Anomaly detection<br/>• Per-device metrics]
-        end
-    end
-    
-    %% Analytics layer
-    subgraph "Analytics Endpoints"
-        Analytics[📈 /analytics<br/>Recent messages]
-        DeviceStats[📊 /device-stats<br/>Aggregated metrics]
-        Anomalies[⚠️ /anomalies<br/>Flagged events]
-    end
-    
-    %% Benchmarking layer
-    subgraph "Performance Testing"
-        Benchmark[🔬 Benchmark Service<br/>:8002<br/>• Load generation<br/>• Performance measurement<br/>• Results analysis]
-    end
-    
-    %% Connections
-    IoT --> Producer
-    Producer --> Kafka
-    Kafka --> Consumer
-    Consumer --> Cache
-    Consumer --> Stats
-    Consumer --> Analytics
-    Consumer --> DeviceStats  
-    Consumer --> Anomalies
-    
-    Benchmark -.-> Producer
-    Benchmark -.-> Consumer
-    
-    %% Docker container boundaries
-    subgraph "Docker Containers"
-        direction TB
-        Producer
-        Consumer
-        Kafka
-        Benchmark
-    end
-    
-    %% Data flow annotations
-    Producer -.->|"JSON validation<br/>Message enrichment<br/>UUID generation"| Kafka
-    Kafka -.->|"Poll every 1s<br/>JSON parsing"| Consumer
-    Consumer -.->|"Statistics calculation<br/>Anomaly detection<br/>In-memory storage"| Stats
-    
-    %% Performance characteristics
-    classDef fastapi fill:#009688,stroke:#004d40,stroke-width:2px,color:#fff
-    classDef kafka fill:#ff5722,stroke:#d84315,stroke-width:2px,color:#fff
-    classDef storage fill:#2196f3,stroke:#1565c0,stroke-width:2px,color:#fff
-    classDef benchmark fill:#9c27b0,stroke:#6a1b9a,stroke-width:2px,color:#fff
-    classDef endpoint fill:#4caf50,stroke:#2e7d32,stroke-width:2px,color:#fff
-    
-    class Producer,Consumer fastapi
-    class Kafka kafka
-    class Cache,Stats storage
-    class Benchmark benchmark
-    class Analytics,DeviceStats,Anomalies endpoint
-```
+
+<img width="491" height="571" alt="data-streamer drawio" src="https://github.com/user-attachments/assets/2ca0b08c-0ddc-4d45-904e-ae7a4b5323df" />
+
+#### v1 Architecture Diagram
+
+<img width="551" height="571" alt="data-streamer-v1 drawio(1)" src="https://github.com/user-attachments/assets/7088cca3-14ca-4df1-886b-82b09bf576b1" />
 
 ---
 
 ### Performance Results
+
+These results are collected from the benchmarking service which simulates requests from IoT devices at a predefined rate. While not suitable for rigorous performance analysis, this approach effectively detects major performance changes and validates system functionality as the architecture evolves.
 
 #### v0 Performance Results
 | Test Type | Date/Time | Target RPS | Actual RPS | P99 Latency (ms) | Error Rate | Duration (s) |
@@ -127,3 +55,25 @@ graph TB
 | ceiling | 2025-09-24 14:55 | 400 | 345.6 | 3.9 | 0.0% | 45.0 |
 | ceiling | 2025-09-24 14:56 | 450 | 367.8 | 3.9 | 0.0% | 45.0 |
 | ceiling | 2025-09-24 14:57 | 500 | 364.8 | 3.9 | 0.0% | 45.0 |
+
+#### v1 Performance Results
+| Test Type | Date/Time | Target RPS | Actual RPS | P99 Latency (ms) | Error Rate | Duration (s) |
+|-----------|-----------|------------|------------|------------------|------------|-------------|
+| light_load | 2025-09-25 19:41 | 25 | 24.9 | 4.6 | 0.0% | 60.3 |
+| standard_load | 2025-09-25 19:42 | 100 | 99.6 | 4.3 | 0.0% | 120.0 |
+| high_load | 2025-09-25 19:45 | 250 | 248.1 | 4.1 | 0.0% | 60.0 |
+| ceiling | 2025-09-25 19:20 | 50 | 49.8 | 6.6 | 0.0% | 45.2 |
+| ceiling | 2025-09-25 19:21 | 100 | 99.4 | 5.1 | 0.0% | 45.3 |
+| ceiling | 2025-09-25 19:23 | 150 | 149.2 | 4.5 | 0.0% | 45.2 |
+| ceiling | 2025-09-25 19:24 | 200 | 199.8 | 4.3 | 0.0% | 45.0 |
+| ceiling | 2025-09-25 19:25 | 250 | 248.4 | 4.4 | 0.0% | 45.0 |
+| ceiling | 2025-09-25 19:26 | 300 | 297.5 | 4.1 | 0.0% | 45.0 |
+| ceiling | 2025-09-25 19:27 | 350 | 345.7 | 3.7 | 0.0% | 45.0 |
+| ceiling | 2025-09-25 19:28 | 400 | 391.9 | 3.7 | 0.0% | 45.0 |
+| ceiling | 2025-09-25 19:30 | 450 | 438.9 | 3.5 | 0.0% | 45.0 |
+| ceiling | 2025-09-25 19:31 | 500 | 476.1 | 3.5 | 0.0% | 45.0 |
+| ceiling | 2025-09-25 19:32 | 550 | 509.2 | 3.3 | 0.0% | 45.0 |
+| ceiling | 2025-09-25 19:33 | 600 | 565.9 | 3.1 | 0.0% | 45.0 |
+| ceiling | 2025-09-25 19:34 | 650 | 593.7 | 3.2 | 0.0% | 45.0 |
+| ceiling | 2025-09-25 19:35 | 700 | 617.4 | 3.1 | 0.0% | 45.0 |
+| ceiling | 2025-09-25 19:37 | 750 | 544.2 | 3.2 | 0.0% | 45.0 |
