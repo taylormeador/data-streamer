@@ -16,9 +16,15 @@ This project is a learning-focused exploration of distributed systems architectu
 
 - **v0 (9-24-25)** — Initial version. Producer API → Kafka → Consumer API. No database. Simple, in-memory real-time metrics + anomaly detection.  
 - **v1 (9-25-25)** — Database integration (Postgres) for persistence. Consumer API writes metrics + anomalies to DB with defined schema. Serving analytics endpoints from db queries instead of in-memory data structures.
-- **v2 (TBD)** — Visualization layer (Grafana). Enhanced anomaly detection. Alerting/notification system.
-- **v3 (TBD)** — Scalable deployment. Multiple consumer groups + partitioning for high throughput.
-- **v4 (TBD)** — Rewrite APIs in Go.
+
+### Tentative Roadmap
+
+  - Redis caching layer.
+  - Full REST API in Go for historical + analytics data.
+  - Split Consumer API into consumer/processor services, add corresponding Kafka topics.
+  - Visualization layer (Grafana). Enhanced anomaly detection. Alerting/notification system.
+  - API Gateway (centralized routing, authentication/authorization, rate limiting)
+  - Split DB into OLTP/OLAP DBs (Postgres + time series DB e.g. TimescaleDB, InfluxDB) and add ETL batch jobs service.
 
 ---
 
