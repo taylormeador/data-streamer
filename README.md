@@ -9,6 +9,7 @@ This project is a learning-focused exploration of distributed systems architectu
 |----------|----------------------|---------------------|
 | 9-24-25  | [v0 Architecture](#v0-architecture-diagram) | [v0 Results](#v0-performance-results) · [JSON](/performance/v0_results.json) |
 | 9-25-25  | [v1 Architecture](#v1-architecture-diagram) | [v1 Results](#v1-performance-results) · [JSON](/performance/v1_results.json) |
+| 9-30-25  | [v2 Architecture](#v2-architecture-diagram) | [v2 Results](#v2-performance-results) · [JSON](/performance/v2_results.json) |
 
 ---
 
@@ -16,10 +17,10 @@ This project is a learning-focused exploration of distributed systems architectu
 
 - **v0 (9-24-25)** — Initial version. Producer API → Kafka → Consumer API. No database. Simple, in-memory real-time metrics + anomaly detection.  
 - **v1 (9-25-25)** — Database integration (Postgres) for persistence. Consumer API writes metrics + anomalies to DB with defined schema. Serving analytics endpoints from db queries instead of in-memory data structures.
+- **v2 (9-30-25)** — Add Redis with simple read through caching for /analytics and /device-stats endpoints.
 
 ### Tentative Roadmap
 
-  - Redis caching layer.
   - Full REST API in Go for historical + analytics data.
   - Split Consumer API into consumer/processor services, add corresponding Kafka topics.
   - Visualization layer (Grafana). Enhanced anomaly detection. Alerting/notification system.
@@ -38,6 +39,10 @@ This project is a learning-focused exploration of distributed systems architectu
 #### v1 Architecture Diagram
 
 <img width="551" height="571" alt="data-streamer-v1 drawio(1)" src="https://github.com/user-attachments/assets/7088cca3-14ca-4df1-886b-82b09bf576b1" />
+
+#### v2 Architecture Diagram
+
+<img width="601" height="571" alt="data-streamer-v2 drawio" src="https://github.com/user-attachments/assets/89021d9d-3736-40ab-b6b3-bf502ada297c" />
 
 ---
 
@@ -83,3 +88,11 @@ These results are collected from the benchmarking service which simulates reques
 | ceiling | 2025-09-25 19:34 | 650 | 593.7 | 3.2 | 0.0% | 45.0 |
 | ceiling | 2025-09-25 19:35 | 700 | 617.4 | 3.1 | 0.0% | 45.0 |
 | ceiling | 2025-09-25 19:37 | 750 | 544.2 | 3.2 | 0.0% | 45.0 |
+
+#### v2 Performance Results
+| Test Type | Date/Time | Target RPS | Actual RPS | P99 Latency (ms) | Error Rate | Duration (s) |
+|-----------|-----------|------------|------------|------------------|------------|-------------|
+| individual | 2025-09-30 20:54 | 50 | 49.7 | 10.2 | 0.0% | 30.2 |
+
+
+I did not run the full benchmarking suite for this iteration because nothing that is put under load by the suite was changed. In the future, I will likely add functionality to the benchmark service which will send requests to the analytics endpoints, but I want to wait until I have a standalone analytics API implemented first.
