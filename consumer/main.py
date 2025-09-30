@@ -251,7 +251,7 @@ app = FastAPI(title="Consumer", version="2.0.0", lifespan=lifespan)
 @app.get("/analytics")
 async def analytics(limit: int = 10):
     """Returns the most recent processed messages from database with Redis caching."""
-    cache_key = f"analytics:{limit}"
+    cache_key = f"analytics:"
 
     # Try Redis cache first
     if redis_client:
@@ -291,6 +291,19 @@ async def analytics(limit: int = 10):
 @app.get("/device-stats")
 async def device_statistics():
     """Returns aggregated statistics per device from database."""
+    cache_key = "device-stats"
+
+    # Try Redis cache first
+    if redis_client:
+        try:
+            cached_data = await redis_client.get(cache_key)
+            if cached_data:
+                logging.info(f"Cache HIT for {cache_key}")
+                return {"device-stats": json.loads(cached_data), "source": "cache"}
+        except Exception as e:
+            logging.error(f"Redis read error: {e}")
+
+    # Cache miss or Redis unavailable - query database
     query = """
         SELECT 
             device_id,
@@ -315,7 +328,18 @@ async def device_statistics():
                 "last_seen": row["last_seen"].isoformat() if row["last_seen"] else None,
                 "anomaly_count": row["anomaly_count"],
             }
-    return {"device_stats": stats_summary}
+
+    # Cache the result for 30 seconds
+    if redis_client and stats_summary:
+        try:
+            await redis_client.setex(
+                cache_key, 30, json.dumps(stats_summary, default=str)
+            )
+            logging.info(f"Cached {cache_key} for 30 seconds")
+        except Exception as e:
+            logging.error(f"Redis write error: {e}")
+
+    return {"device_stats": stats_summary, "source": "database"}
 
 
 @app.get("/anomalies")
