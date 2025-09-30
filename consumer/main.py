@@ -8,7 +8,7 @@ import time
 import asyncio
 from contextlib import asynccontextmanager
 import asyncpg
-import uuid
+import redis.asyncio as redis
 
 logging.basicConfig(level=logging.INFO)
 
@@ -16,12 +16,15 @@ KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "kafka:29092")
 DATABASE_URL = os.getenv(
     "DATABASE_URL", "postgresql://iot_user:iot_password@postgres:5432/iot_platform"
 )
+REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379")
 TOPIC = "iot-sensor-data"
 
 # Global database pool for API endpoints
 api_db_pool = None
 # Separate connection for consumer thread
 consumer_db_pool = None
+# Redis connection
+redis_client = None
 
 # Init Kafka consumer
 consumer = Consumer(
@@ -190,9 +193,9 @@ def consume_loop():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Handle startup and shutdown events"""
-    global api_db_pool
+    global api_db_pool, redis_client
 
-    # Startup with retry logic
+    # Startup with retry logic for database
     max_retries = 30
     retry_delay = 2
 
@@ -214,6 +217,15 @@ async def lifespan(app: FastAPI):
             )
             await asyncio.sleep(retry_delay)
 
+    # Connect to Redis
+    try:
+        redis_client = await redis.from_url(REDIS_URL, decode_responses=True)
+        await redis_client.ping()
+        logging.info("Connected to Redis")
+    except Exception as e:
+        logging.error(f"Failed to connect to Redis: {e}")
+        redis_client = None
+
     # Start consumer thread
     thread = threading.Thread(target=consume_loop, daemon=True)
     thread.start()
@@ -226,7 +238,9 @@ async def lifespan(app: FastAPI):
         await api_db_pool.close()
     if consumer_db_pool:
         await consumer_db_pool.close()
-    logging.info("Disconnected from PostgreSQL database")
+    if redis_client:
+        await redis_client.aclose()
+    logging.info("Disconnected from PostgreSQL database and Redis")
 
 
 # FastAPI app setup
@@ -236,7 +250,21 @@ app = FastAPI(title="Consumer", version="2.0.0", lifespan=lifespan)
 # API Routes
 @app.get("/analytics")
 async def analytics(limit: int = 10):
-    """Returns the most recent processed messages from the database."""
+    """Returns the most recent processed messages from database with Redis caching."""
+    cache_key = f"analytics:{limit}"
+
+    # Try Redis cache first
+    if redis_client:
+        try:
+            cached_data = await redis_client.get(cache_key)
+            if cached_data:
+                logging.info(f"Cache HIT for {cache_key}")
+                return {"messages": json.loads(cached_data), "source": "cache"}
+        except Exception as e:
+            logging.error(f"Redis read error: {e}")
+
+    # Cache miss or Redis unavailable - query database
+    logging.info(f"Cache MISS for {cache_key}")
     query = """
         SELECT device_id, metric, value, timestamp, location, 
                anomaly_detected, rolling_avg, deviation_pct, processed_at
@@ -248,7 +276,16 @@ async def analytics(limit: int = 10):
     async with api_db_pool.acquire() as connection:
         results = await connection.fetch(query, limit)
         messages = [dict(row) for row in results]
-    return {"messages": messages}
+
+    # Cache the result for 30 seconds
+    if redis_client and messages:
+        try:
+            await redis_client.setex(cache_key, 30, json.dumps(messages, default=str))
+            logging.info(f"Cached {cache_key} for 30 seconds")
+        except Exception as e:
+            logging.error(f"Redis write error: {e}")
+
+    return {"messages": messages, "source": "database"}
 
 
 @app.get("/device-stats")
