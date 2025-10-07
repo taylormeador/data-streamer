@@ -2,6 +2,8 @@
 
 This project is a learning-focused exploration of distributed systems architecture using an IoT data streaming platform as the foundation. The primary goal is gaining hands-on experience with modern backend technologies including Kafka, Redis, PostgreSQL, and containerized microservices.
 
+See [API.md](API.md) for complete endpoint documentation.
+
 
 ### Timeline
 
