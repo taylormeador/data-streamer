@@ -1,70 +1,54 @@
 package main
 
 import (
-    "encoding/json"
-    "log"
-    "net/http"
-    "os"
-    "time"
+	"flag"
+	"fmt"
+	"log/slog"
+	"net/http"
+	"os"
+	"time"
 )
 
+const version = "1.0.0"
+
+type config struct {
+	port int
+	env  string
+}
+
 type application struct {
-    logger *log.Logger
+	config config
+	logger *slog.Logger
 }
 
 func main() {
-    logger := log.New(os.Stdout, "", log.Ldate|log.Ltime)
+	// Parse config
+	var cfg config
 
-    app := &application{
-        logger: logger,
-    }
+	flag.IntVar(&cfg.port, "port", 8003, "API server port")
+	flag.StringVar(&cfg.env, "env", "development", "Environment (development|staging|production)")
+	flag.Parse()
 
-    srv := &http.Server{
-        Addr:         ":8003",
-        Handler:      app.routes(),
-        IdleTimeout:  time.Minute,
-        ReadTimeout:  10 * time.Second,
-        WriteTimeout: 30 * time.Second,
-    }
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
-    logger.Printf("starting analytics API server on %s", srv.Addr)
-    err := srv.ListenAndServe()
-    logger.Fatal(err)
-}
+	app := &application{
+		config: cfg,
+		logger: logger,
+	}
 
-func (app *application) routes() http.Handler {
-    mux := http.NewServeMux()
+	// Configure and start server
+	srv := &http.Server{
+		Addr:         fmt.Sprintf(":%d", cfg.port),
+		Handler:      app.routes(),
+		IdleTimeout:  time.Minute,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		ErrorLog:     slog.NewLogLogger(logger.Handler(), slog.LevelError),
+	}
 
-    mux.HandleFunc("GET /health", app.healthCheckHandler)
-    mux.HandleFunc("GET /hello", app.helloHandler)
+	logger.Info("starting server", "addr", srv.Addr, "env", cfg.env)
 
-    return mux
-}
-
-func (app *application) healthCheckHandler(w http.ResponseWriter, r *http.Request) {
-    data := map[string]string{
-        "status": "healthy",
-        "service": "analytics-api",
-    }
-
-    app.writeJSON(w, http.StatusOK, data)
-}
-
-func (app *application) helloHandler(w http.ResponseWriter, r *http.Request) {
-    data := map[string]string{
-        "message": "Hello from Analytics API",
-        "version": "1.0.0",
-    }
-
-    app.writeJSON(w, http.StatusOK, data)
-}
-
-func (app *application) writeJSON(w http.ResponseWriter, status int, data interface{}) {
-    w.Header().Set("Content-Type", "application/json")
-    w.WriteHeader(status)
-    
-    err := json.NewEncoder(w).Encode(data)
-    if err != nil {
-        app.logger.Println(err)
-    }
+	err := srv.ListenAndServe()
+	logger.Error(err.Error())
+	os.Exit(1)
 }
