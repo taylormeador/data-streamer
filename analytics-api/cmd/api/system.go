@@ -8,13 +8,13 @@ import (
 
 // Writes information about the application status, operating environment and version.
 func (app *application) systemHealthHandler(w http.ResponseWriter, r *http.Request) {
-	data := data.SystemHealth{
+	systemHealth := data.SystemHealth{
 		Status:      "available",
 		Environment: app.config.env,
 		Version:     version,
 	}
 
-	err := app.writeJSON(w, http.StatusOK, data, nil)
+	err := app.writeJSON(w, http.StatusOK, envelope{"system_health": systemHealth}, nil)
 	if err != nil {
 		app.logger.Error(err.Error())
 		http.Error(w, "The server encountered a problem and could not process your request", http.StatusInternalServerError)
@@ -30,7 +30,7 @@ func (app *application) systemStatsHandler(w http.ResponseWriter, r *http.Reques
 		LatestReading:  nil,
 	}
 
-	err := app.writeJSON(w, http.StatusOK, systemStats, nil)
+	err := app.writeJSON(w, http.StatusOK, envelope{"system_stats": systemStats}, nil)
 	if err != nil {
 		app.logger.Error(err.Error())
 		http.Error(w, "The server encountered a problem and could not process your request", http.StatusInternalServerError)
