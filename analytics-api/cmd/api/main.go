@@ -7,6 +7,10 @@ import (
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/taylormeador/data-streamer/analytics-api/internal/database"
 )
 
 const version = "1.0.0"
@@ -19,6 +23,7 @@ type config struct {
 type application struct {
 	config config
 	logger *slog.Logger
+	db     *pgxpool.Pool
 }
 
 func main() {
@@ -31,9 +36,18 @@ func main() {
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
+	db, err := database.Open(os.Getenv("DATABASE_URL"))
+	if err != nil {
+		logger.Error(err.Error())
+		os.Exit(1)
+	}
+	logger.Info("connected to database")
+	defer db.Close()
+
 	app := &application{
 		config: cfg,
 		logger: logger,
+		db:     db,
 	}
 
 	// Configure and start server
@@ -48,7 +62,7 @@ func main() {
 
 	logger.Info("starting server", "addr", srv.Addr, "env", cfg.env)
 
-	err := srv.ListenAndServe()
+	err = srv.ListenAndServe()
 	logger.Error(err.Error())
 	os.Exit(1)
 }
