@@ -8,8 +8,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-
+	"github.com/taylormeador/data-streamer/analytics-api/internal/data"
 	"github.com/taylormeador/data-streamer/analytics-api/internal/database"
 )
 
@@ -23,7 +22,7 @@ type config struct {
 type application struct {
 	config config
 	logger *slog.Logger
-	db     *pgxpool.Pool
+	models data.Models
 }
 
 func main() {
@@ -47,7 +46,7 @@ func main() {
 	app := &application{
 		config: cfg,
 		logger: logger,
-		db:     db,
+		models: data.NewModels(db),
 	}
 
 	// Configure and start server
