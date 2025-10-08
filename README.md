@@ -48,6 +48,46 @@ See [API.md](API.md) for complete endpoint documentation.
 
 ---
 
+### Benchmark Commands
+
+**Start all services**:
+```bash
+docker-compose up --build
+```
+
+**Run baseline suite** (tests at 25, 100, 250 RPS):
+```bash
+curl -X POST http://localhost:8002/baseline-suite
+```
+
+**Run throughput ceiling test** (incrementally increases load until failure):
+```bash
+curl -X POST http://localhost:8002/throughput-ceiling
+```
+
+**Check benchmark status** (while tests are running):
+```bash
+curl http://localhost:8002/benchmark-status
+```
+
+**Get benchmark results** (JSON format):
+```bash
+curl http://localhost:8002/benchmark-results
+```
+
+**Get markdown-formatted results** (for README):
+```bash
+curl http://localhost:8002/benchmark-markdown-raw
+```
+
+### Notes
+
+- Baseline suite takes approximately 8 minutes to complete
+- Throughput ceiling test duration varies based on system performance (5-10 minutes is typical)
+- For fresh database state between tests, use `docker-compose down -v` before restarting
+
+---
+
 ### Performance Results
 
 These results are collected from the benchmarking service which simulates requests from IoT devices at a predefined rate. While not suitable for rigorous performance analysis, this approach effectively detects major performance changes and validates system functionality as the architecture evolves.
