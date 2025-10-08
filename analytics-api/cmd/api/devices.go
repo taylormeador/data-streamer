@@ -19,8 +19,7 @@ func (app *application) getDevicesHandler(w http.ResponseWriter, r *http.Request
 
 	err := app.writeJSON(w, http.StatusOK, envelope{"devices": devices}, nil)
 	if err != nil {
-		app.logger.Error(err.Error())
-		http.Error(w, "The server encountered a problem and could not process your request", http.StatusInternalServerError)
+		app.serverErrorResponse(w, r, err)
 	}
 }
 
@@ -29,7 +28,7 @@ func (app *application) getDevicesHandler(w http.ResponseWriter, r *http.Request
 func (app *application) getDeviceHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := app.readIDParam(r)
 	if err != nil {
-		http.NotFound(w, r)
+		app.notFoundResponse(w, r)
 		return
 	}
 
@@ -48,7 +47,6 @@ func (app *application) getDeviceHandler(w http.ResponseWriter, r *http.Request)
 
 	err = app.writeJSON(w, http.StatusOK, envelope{"device_reading": deviceReading}, nil)
 	if err != nil {
-		app.logger.Error(err.Error())
-		http.Error(w, "The server encountered a problem and could not process your request", http.StatusInternalServerError)
+		app.serverErrorResponse(w, r, err)
 	}
 }

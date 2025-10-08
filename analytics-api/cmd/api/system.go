@@ -16,8 +16,7 @@ func (app *application) systemHealthHandler(w http.ResponseWriter, r *http.Reque
 
 	err := app.writeJSON(w, http.StatusOK, envelope{"system_health": systemHealth}, nil)
 	if err != nil {
-		app.logger.Error(err.Error())
-		http.Error(w, "The server encountered a problem and could not process your request", http.StatusInternalServerError)
+		app.serverErrorResponse(w, r, err)
 	}
 }
 
@@ -32,7 +31,6 @@ func (app *application) systemStatsHandler(w http.ResponseWriter, r *http.Reques
 
 	err := app.writeJSON(w, http.StatusOK, envelope{"system_stats": systemStats}, nil)
 	if err != nil {
-		app.logger.Error(err.Error())
-		http.Error(w, "The server encountered a problem and could not process your request", http.StatusInternalServerError)
+		app.serverErrorResponse(w, r, err)
 	}
 }
