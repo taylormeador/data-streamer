@@ -1,6 +1,8 @@
 # Real-Time IoT Device Data Streaming Platform
 
-This project is a learning-focused exploration of distributed systems architecture using an IoT data streaming platform as the foundation. The primary goal is gaining hands-on experience with modern backend technologies including Kafka, Redis, PostgreSQL, and containerized microservices.
+This project explores distributed systems architecture and event-driven design patterns through a simulated IoT data streaming platform. The primary goal is to deepen expertise with Python, Go, Kafka, Redis, PostgreSQL, and containerized microservices. The platform has evolved from a simple monolithic service toward a more sophisticated microservices architecture, documented below.
+
+Each iteration introduces new distributed systems concepts and architectural patterns, demonstrating practical implementations of service communication, caching strategies, data consistency management, and operational complexity in production-like environments.
 
 See [API.md](API.md) for complete endpoint documentation.
 
