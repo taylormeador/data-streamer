@@ -13,7 +13,7 @@ The Analytics API provides RESTful access to IoT device data, including historic
 - [x] `/devices/{id}` - Get device details
 - [x] `/devices/{id}/readings` - Get device readings
 - [x] `/devices/{id}/anomalies` - Get device anomalies
-- [ ] `/readings` - Get recent readings
+- [x] `/readings` - Get recent readings
 - [ ] `/readings/latest` - Get latest readings
 - [ ] `/anomalies` - Get recent anomalies
 
