@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"net/http"
 
 	"github.com/taylormeador/data-streamer/analytics-api/internal/data"
@@ -23,7 +22,7 @@ func (app *application) systemHealthHandler(w http.ResponseWriter, r *http.Reque
 
 // Writes system-wide statistics and metrics.
 func (app *application) systemStatsHandler(w http.ResponseWriter, r *http.Request) {
-	systemStats, err := app.models.System.GetSystemStats(context.Background())
+	systemStats, err := app.models.System.GetSystemStats(r.Context())
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
