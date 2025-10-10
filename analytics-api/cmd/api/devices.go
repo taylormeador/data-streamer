@@ -106,3 +106,52 @@ func (app *application) getDeviceReadingsHandler(w http.ResponseWriter, r *http.
 		app.serverErrorResponse(w, r, err)
 	}
 }
+
+// Handles GET /devices/{id}/anomalies - returns anomalous readings for a device.
+func (app *application) getDeviceAnomaliesHandler(w http.ResponseWriter, r *http.Request) {
+
+	// Parse PATH parameter
+	params := httprouter.ParamsFromContext(r.Context())
+	deviceID := params.ByName("id")
+
+	// Parse start time
+	var start *time.Time
+	if startStr := r.URL.Query().Get("start"); startStr != "" {
+		parsedStart, err := time.Parse(time.RFC3339, startStr)
+		if err != nil {
+			app.badRequestResponse(w, r, err)
+			return
+		}
+		start = &parsedStart
+	}
+
+	// Parse end time
+	var end *time.Time
+	if endStr := r.URL.Query().Get("end"); endStr != "" {
+		parsedEnd, err := time.Parse(time.RFC3339, endStr)
+		if err != nil {
+			app.badRequestResponse(w, r, err)
+			return
+		}
+		end = &parsedEnd
+	}
+
+	// Parse limit
+	limit := 100 // default
+	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
+		if parsedLimit, err := strconv.Atoi(limitStr); err == nil && parsedLimit > 0 {
+			limit = parsedLimit
+		}
+	}
+
+	anomalies, err := app.models.Devices.GetDeviceAnomalies(r.Context(), deviceID, start, end, limit)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	err = app.writeJSON(w, http.StatusOK, envelope{"anomalies": anomalies}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
+}
