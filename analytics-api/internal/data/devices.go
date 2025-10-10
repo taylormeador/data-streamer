@@ -2,8 +2,12 @@ package data
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -21,7 +25,7 @@ type DeviceReading struct {
 	Metric          string    `json:"metric"`
 	Value           float64   `json:"value"`
 	Timestamp       time.Time `json:"timestamp"`
-	Location        string    `json:"location,omitempty"`
+	Location        string    `json:"location"`
 	AnomalyDetected bool      `json:"anomaly_detected"`
 	RollingAvg      float64   `json:"rolling_avg"`
 	DeviationPct    float64   `json:"deviation_pct"`
@@ -88,6 +92,12 @@ func (d DeviceModel) GetAllDevices(ctx context.Context, activeOnly bool, limit i
 
 // GetDevice returns statistics for a single device.
 func (d DeviceModel) GetDevice(ctx context.Context, deviceID string) (*Device, error) {
+
+	// Return before DB call if deviceID is not valid
+	if !strings.HasPrefix(deviceID, "device_") {
+		return nil, ErrRecordNotFound
+	}
+
 	query := `
         SELECT 
             device_id,
@@ -109,8 +119,92 @@ func (d DeviceModel) GetDevice(ctx context.Context, deviceID string) (*Device, e
 		&device.AnomalyCount,
 	)
 	if err != nil {
-		return nil, err
+		switch {
+		case errors.Is(err, pgx.ErrNoRows):
+			return nil, ErrRecordNotFound
+		default:
+			return nil, err
+		}
 	}
 
 	return &device, nil
+}
+
+// GetDeviceReadings returns historical readings for a specific device with optional filters.
+func (d DeviceModel) GetDeviceReadings(ctx context.Context, deviceID string, metric string, start, end *time.Time, limit int) ([]*DeviceReading, error) {
+	query := `
+        SELECT 
+            id,
+			device_id,
+			metric,
+			value,
+			timestamp,
+			location,
+            anomaly_detected,
+			rolling_avg,
+			deviation_pct,
+			processed_at
+        FROM device_readings
+        WHERE device_id = $1
+    `
+
+	args := []any{deviceID}
+	argPos := 2
+
+	// Add optional filters
+	if metric != "" {
+		query += fmt.Sprintf(" AND metric = $%d", argPos)
+		args = append(args, metric)
+		argPos++
+	}
+
+	if start != nil {
+		query += fmt.Sprintf(" AND timestamp >= $%d", argPos)
+		args = append(args, *start)
+		argPos++
+	}
+
+	if end != nil {
+		query += fmt.Sprintf(" AND timestamp <= $%d", argPos)
+		args = append(args, *end)
+		argPos++
+	}
+
+	query += fmt.Sprintf(" ORDER BY timestamp DESC LIMIT $%d", argPos)
+	args = append(args, limit)
+
+	rows, err := d.db.Query(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var readings []*DeviceReading
+	for rows.Next() {
+		var reading DeviceReading
+
+		err := rows.Scan(
+			&reading.ID,
+			&reading.DeviceID,
+			&reading.Metric,
+			&reading.Value,
+			&reading.Timestamp,
+			&reading.Location,
+			&reading.AnomalyDetected,
+			&reading.RollingAvg,
+			&reading.DeviationPct,
+			&reading.ProcessedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		readings = append(readings, &reading)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return readings, nil
 }

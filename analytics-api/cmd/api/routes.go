@@ -17,6 +17,7 @@ func (app *application) routes() http.Handler {
 
 	router.HandlerFunc(http.MethodGet, "/v1/devices", app.getDevicesHandler)
 	router.HandlerFunc(http.MethodGet, "/v1/devices/:id", app.getDeviceHandler)
+	router.HandlerFunc(http.MethodGet, "/v1/devices/:id/readings", app.getDeviceReadingsHandler)
 
 	return app.recoverPanic(router)
 }
