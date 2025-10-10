@@ -13,10 +13,8 @@ import redis.asyncio as redis
 logging.basicConfig(level=logging.INFO)
 
 KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "kafka:29092")
-DATABASE_URL = os.getenv(
-    "DATABASE_URL", "postgresql://iot_user:iot_password@postgres:5432/iot_platform"
-)
-REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379")
+DATABASE_URL = os.getenv("DATABASE_URL")
+REDIS_URL = os.getenv("REDIS_URL")
 TOPIC = "iot-sensor-data"
 
 # Global database pool for API endpoints
