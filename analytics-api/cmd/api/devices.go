@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/taylormeador/data-streamer/analytics-api/internal/data"
@@ -9,15 +10,22 @@ import (
 
 // Writes aggregate statistics for all devices in the system.
 func (app *application) getDevicesHandler(w http.ResponseWriter, r *http.Request) {
-	devices := data.DeviceStats{
-		DeviceID:     45,
-		MessageCount: 0,
-		AvgValue:     0.0,
-		LastSeen:     time.Now(),
-		AnomalyCount: 0,
+	activeOnly := r.URL.Query().Get("active") == "true"
+
+	limit := 50 // default
+	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
+		if parsedLimit, err := strconv.Atoi(limitStr); err == nil && parsedLimit > 0 {
+			limit = parsedLimit
+		}
 	}
 
-	err := app.writeJSON(w, http.StatusOK, envelope{"devices": devices}, nil)
+	devices, err := app.models.Devices.GetAllDevices(r.Context(), activeOnly, limit)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	err = app.writeJSON(w, http.StatusOK, envelope{"devices": devices}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 	}

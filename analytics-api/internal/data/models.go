@@ -9,11 +9,13 @@ import (
 var ErrRecordNotFound = errors.New("record not found")
 
 type Models struct {
-	System SystemModel
+	System  SystemModel
+	Devices DeviceModel
 }
 
 func NewModels(db *pgxpool.Pool) Models {
 	return Models{
-		System: SystemModel{db: db},
+		System:  SystemModel{db: db},
+		Devices: DeviceModel{db: db},
 	}
 }
