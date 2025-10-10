@@ -63,3 +63,23 @@ func (app *application) getReadingsHandler(w http.ResponseWriter, r *http.Reques
 		app.serverErrorResponse(w, r, err)
 	}
 }
+
+// Handles GET /readings/latest - returns the most recent reading for each device.
+func (app *application) getLatestReadingsHandler(w http.ResponseWriter, r *http.Request) {
+	// Parse metric filter
+	metric := r.URL.Query().Get("metric")
+
+	// Parse active_only filter (only devices seen recently)
+	activeOnly := r.URL.Query().Get("active") == "true"
+
+	readings, err := app.models.Readings.GetLatestReadings(r.Context(), metric, activeOnly)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	err = app.writeJSON(w, http.StatusOK, envelope{"readings": readings, "count": len(readings)}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
+}

@@ -24,6 +24,7 @@ func (app *application) routes() http.Handler {
 
 	// Readings endpoints
 	router.HandlerFunc(http.MethodGet, "/v1/readings", app.getReadingsHandler)
+	router.HandlerFunc(http.MethodGet, "/v1/readings/latest", app.getLatestReadingsHandler)
 
 	return app.recoverPanic(router)
 }
