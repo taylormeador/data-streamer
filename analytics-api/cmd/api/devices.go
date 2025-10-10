@@ -1,11 +1,12 @@
 package main
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
-	"time"
 
-	"github.com/taylormeador/data-streamer/analytics-api/internal/data"
+	"github.com/jackc/pgx/v5"
+	"github.com/julienschmidt/httprouter"
 )
 
 // Writes aggregate statistics for all devices in the system.
@@ -31,29 +32,23 @@ func (app *application) getDevicesHandler(w http.ResponseWriter, r *http.Request
 	}
 }
 
-// Retrieve the interpolated "id" parameter from the current URL and include
-// it in a placeholder response.
+// Retrieve the interpolated "id" parameter from the current URL and write stats for the associated device.
 func (app *application) getDeviceHandler(w http.ResponseWriter, r *http.Request) {
-	id, err := app.readIDParam(r)
+	params := httprouter.ParamsFromContext(r.Context())
+	id := params.ByName("id")
+
+	device, err := app.models.Devices.GetDevice(r.Context(), id)
 	if err != nil {
-		app.notFoundResponse(w, r)
+		switch {
+		case errors.Is(err, pgx.ErrNoRows):
+			app.notFoundResponse(w, r)
+		default:
+			app.serverErrorResponse(w, r, err)
+		}
 		return
 	}
 
-	deviceReading := data.DeviceReading{
-		ID:              24,
-		DeviceID:        id,
-		Metric:          "temperature",
-		Value:           35.65,
-		Timestamp:       time.Now(),
-		Location:        "warehouse-a",
-		AnomalyDetected: false,
-		RollingAvg:      56.7,
-		DeviationPct:    10.67,
-		ProcessedAt:     time.Now(),
-	}
-
-	err = app.writeJSON(w, http.StatusOK, envelope{"device_reading": deviceReading}, nil)
+	err = app.writeJSON(w, http.StatusOK, envelope{"device": device}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 	}

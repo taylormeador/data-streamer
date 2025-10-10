@@ -17,7 +17,7 @@ type Device struct {
 
 type DeviceReading struct {
 	ID              int       `json:"id"`
-	DeviceID        int64     `json:"device_id"`
+	DeviceID        string    `json:"device_id"`
 	Metric          string    `json:"metric"`
 	Value           float64   `json:"value"`
 	Timestamp       time.Time `json:"timestamp"`
@@ -84,4 +84,33 @@ func (d DeviceModel) GetAllDevices(ctx context.Context, activeOnly bool, limit i
 	}
 
 	return devices, nil
+}
+
+// GetDevice returns statistics for a single device.
+func (d DeviceModel) GetDevice(ctx context.Context, deviceID string) (*Device, error) {
+	query := `
+        SELECT 
+            device_id,
+            COUNT(*) as message_count,
+            AVG(value) as avg_value,
+            MAX(processed_at) as last_seen,
+            COUNT(*) FILTER (WHERE anomaly_detected = true) as anomaly_count
+        FROM device_readings
+        WHERE device_id = $1
+        GROUP BY device_id
+    `
+
+	var device Device
+	err := d.db.QueryRow(ctx, query, deviceID).Scan(
+		&device.DeviceID,
+		&device.MessageCount,
+		&device.AvgValue,
+		&device.LastSeen,
+		&device.AnomalyCount,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &device, nil
 }
