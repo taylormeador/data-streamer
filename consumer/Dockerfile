@@ -1,18 +1,18 @@
-# Use a lightweight Python base image
 FROM python:3.12-slim
 
-# Set working directory inside the container
 WORKDIR /app
 
-# Copy requirements and install dependencies
+# Install system dependencies for confluent-kafka
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    librdkafka-dev \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the FastAPI app
-COPY . .
+COPY main.py .
 
-# Expose the port FastAPI will run on
-EXPOSE 8001
-
-# Command to run FastAPI with Uvicorn
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001", "--reload"]
+# Use -u for unbuffered output so logs show up immediately
+CMD ["python", "-u", "main.py"]
