@@ -1,9 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/taylormeador/data-streamer/analytics-api/internal/data"
 )
 
 // Handles GET /readings - returns recent readings across all devices.
@@ -72,7 +75,19 @@ func (app *application) getLatestReadingsHandler(w http.ResponseWriter, r *http.
 	// Parse active_only filter (only devices seen recently)
 	activeOnly := r.URL.Query().Get("active") == "true"
 
-	readings, err := app.models.Readings.GetLatestReadings(r.Context(), metric, activeOnly)
+	// Build cache key based on query params
+	cacheKey := fmt.Sprintf("readings:latest:metric=%s:active=%t", metric, activeOnly)
+
+	// Use cache with 5 second TTL
+	readings, err := app.cache.GetReadings(
+		r.Context(),
+		cacheKey,
+		5*time.Second,
+		func() ([]*data.DeviceReading, error) {
+			return app.models.Readings.GetLatestReadings(r.Context(), metric, activeOnly)
+		},
+	)
+
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return

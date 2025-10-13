@@ -8,6 +8,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/taylormeador/data-streamer/analytics-api/internal/cache"
 	"github.com/taylormeador/data-streamer/analytics-api/internal/data"
 	"github.com/taylormeador/data-streamer/analytics-api/internal/database"
 )
@@ -23,6 +24,7 @@ type application struct {
 	config config
 	logger *slog.Logger
 	models data.Models
+	cache  *cache.Cache
 }
 
 func main() {
@@ -35,6 +37,7 @@ func main() {
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
+	// Connect to database
 	db, err := database.Open(os.Getenv("DATABASE_URL"))
 	if err != nil {
 		logger.Error(err.Error())
@@ -43,10 +46,20 @@ func main() {
 	logger.Info("connected to database")
 	defer db.Close()
 
+	// Connect to Redis
+	redisCache, err := cache.NewCache(os.Getenv("REDIS_URL"))
+	if err != nil {
+		logger.Error("failed to connect to redis", "error", err)
+		os.Exit(1)
+	}
+	logger.Info("connected to redis")
+	defer redisCache.Close()
+
 	app := &application{
 		config: cfg,
 		logger: logger,
 		models: data.NewModels(db),
+		cache:  redisCache,
 	}
 
 	// Configure and start server
