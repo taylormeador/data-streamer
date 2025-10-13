@@ -59,7 +59,8 @@ services:
     build: ./producer
     container_name: producer-service
     depends_on:
-      - kafka
+      kafka:
+        condition: service_healthy
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       DATABASE_URL: ${DATABASE_URL}
@@ -86,7 +87,7 @@ services:
     container_name: consumer-service
     depends_on:
       kafka:
-        condition: service_started
+        condition: service_healthy
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
     deploy:
@@ -110,10 +111,10 @@ services:
     container_name: benchmark-service
     depends_on:
       - producer
-      - consumer
+      - analytics-api
     environment:
       - PRODUCER_URL=http://producer:8000
-      - CONSUMER_URL=http://consumer:8001
+      - ANALYTICS_API_URL=http://analytics-api:8003
     ports:
       - "8002:8002"
     deploy:
