@@ -26,5 +26,8 @@ func (app *application) routes() http.Handler {
 	router.HandlerFunc(http.MethodGet, "/v1/readings", app.getReadingsHandler)
 	router.HandlerFunc(http.MethodGet, "/v1/readings/latest", app.getLatestReadingsHandler)
 
+	// Anomalies endpoint
+	router.HandlerFunc(http.MethodGet, "/v1/anomalies", app.getAnomaliesHandler)
+
 	return app.recoverPanic(router)
 }

@@ -165,3 +165,82 @@ func (r ReadingModel) GetLatestReadings(ctx context.Context, metric string, acti
 
 	return readings, nil
 }
+
+// GetAnomalies returns anomalous readings across all devices with optional filters.
+func (r ReadingModel) GetAnomalies(ctx context.Context, metric string, start, end *time.Time, limit, offset int) ([]*DeviceReading, error) {
+	query := `
+        SELECT 
+            id,
+            device_id,
+            metric,
+            value,
+            timestamp,
+            location,
+            anomaly_detected,
+            rolling_avg,
+            deviation_pct,
+            processed_at
+        FROM device_readings
+        WHERE anomaly_detected = true
+    `
+
+	args := []any{}
+	argPos := 1
+
+	// Add optional filters
+	if metric != "" {
+		query += fmt.Sprintf(" AND metric = $%d", argPos)
+		args = append(args, metric)
+		argPos++
+	}
+
+	if start != nil {
+		query += fmt.Sprintf(" AND timestamp >= $%d", argPos)
+		args = append(args, *start)
+		argPos++
+	}
+
+	if end != nil {
+		query += fmt.Sprintf(" AND timestamp <= $%d", argPos)
+		args = append(args, *end)
+		argPos++
+	}
+
+	query += fmt.Sprintf(" ORDER BY timestamp DESC LIMIT $%d OFFSET $%d", argPos, argPos+1)
+	args = append(args, limit, offset)
+
+	rows, err := r.db.Query(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var anomalies []*DeviceReading
+	for rows.Next() {
+		var reading DeviceReading
+
+		err := rows.Scan(
+			&reading.ID,
+			&reading.DeviceID,
+			&reading.Metric,
+			&reading.Value,
+			&reading.Timestamp,
+			&reading.Location,
+			&reading.AnomalyDetected,
+			&reading.RollingAvg,
+			&reading.DeviationPct,
+			&reading.ProcessedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		anomalies = append(anomalies, &reading)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return anomalies, nil
+}
