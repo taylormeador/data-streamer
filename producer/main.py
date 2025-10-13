@@ -57,12 +57,6 @@ async def ingest_metric(event: TelemetryEvent):
     enriched_event.message_id = str(uuid.uuid4())  # Add this field to the model
     enriched_event.ingestion_timestamp = time.time()
 
-    # Simple validation logic
-    if event.metric == "temperature" and (event.value < -50 or event.value > 150):
-        logging.warning(
-            f"Suspicious temperature reading: {event.value}"
-        )  # TODO real time monitoring/alerting
-
     logging.info(f"Received event: {enriched_event.model_dump()}")
 
     producer.produce(
