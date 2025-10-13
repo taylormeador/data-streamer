@@ -50,11 +50,14 @@ def validate_message(message_data: dict) -> tuple[bool, str]:
     except (ValueError, TypeError):
         return False, "Value must be numeric"
 
-    # Validate timestamp
+    # Validate timestamp (accept Unix timestamp as float or int)
     try:
-        datetime.fromisoformat(message_data["timestamp"].replace("Z", "+00:00"))
-    except (ValueError, AttributeError):
-        return False, "Invalid timestamp format"
+        timestamp = float(message_data["timestamp"])
+        # Sanity check: timestamp should be reasonable (between 2020 and 2030)
+        if timestamp < 1577836800 or timestamp > 1893456000:  # 2020-01-01 to 2030-01-01
+            return False, f"Timestamp out of reasonable range: {timestamp}"
+    except (ValueError, TypeError):
+        return False, "Timestamp must be numeric (Unix timestamp)"
 
     return True, ""
 
@@ -111,6 +114,7 @@ def main():
                     )
 
                     # Forward to validated topic
+                    logger.info(f'Valid message from {message_data["device_id"]}')
                     producer.produce(
                         OUTPUT_TOPIC,
                         key=message_data["device_id"].encode("utf-8"),
