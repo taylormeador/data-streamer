@@ -2,7 +2,7 @@ from confluent_kafka import Consumer, Producer, KafkaError
 import logging
 import os
 import json
-from datetime import datetime
+import time
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -109,9 +109,7 @@ def main():
 
                 if is_valid:
                     # Add ingestion timestamp
-                    message_data["ingestion_timestamp"] = (
-                        datetime.utcnow().isoformat() + "Z"
-                    )
+                    message_data["ingestion_timestamp"] = time.time()
 
                     # Forward to validated topic
                     logger.info(f'Valid message from {message_data["device_id"]}')
