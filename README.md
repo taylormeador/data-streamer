@@ -14,6 +14,7 @@ See [API.md](API.md) for complete endpoint documentation.
 | 9-24-25  | [v0 Architecture](#v0-architecture-diagram) | [v0 Results](#v0-performance-results) · [JSON](/performance/v0_results.json) |
 | 9-25-25  | [v1 Architecture](#v1-architecture-diagram) | [v1 Results](#v1-performance-results) · [JSON](/performance/v1_results.json) |
 | 9-30-25  | [v2 Architecture](#v2-architecture-diagram) | [v2 Results](#v2-performance-results) · [JSON](/performance/v2_results.json) |
+| 10-12-25 | [v3 Architecture](#v3-architecture-diagram) |                                                                              |
 
 ---
 
@@ -22,10 +23,10 @@ See [API.md](API.md) for complete endpoint documentation.
 - **v0 (9-24-25)** — Initial version. Producer API → Kafka → Consumer API. No database. Simple, in-memory real-time metrics + anomaly detection.  
 - **v1 (9-25-25)** — Database integration (Postgres) for persistence. Consumer API writes metrics + anomalies to DB with defined schema. Serving analytics endpoints from db queries instead of in-memory data structures.
 - **v2 (9-30-25)** — Add Redis with simple read through caching for /analytics and /device-stats endpoints.
+- **v3 (10-12-25)** - Add REST API (Go) for historical + analytics data.
 
 ### Tentative Roadmap
 
-  - Full REST API in Go for historical + analytics data.
   - Split Consumer API into consumer/processor services, add corresponding Kafka topics.
   - Visualization layer (Grafana). Enhanced anomaly detection. Alerting/notification system.
   - API Gateway (centralized routing, authentication/authorization, rate limiting)
@@ -47,6 +48,10 @@ See [API.md](API.md) for complete endpoint documentation.
 #### v2 Architecture Diagram
 
 <img width="601" height="571" alt="data-streamer-v2 drawio" src="https://github.com/user-attachments/assets/89021d9d-3736-40ab-b6b3-bf502ada297c" />
+
+#### v3 Architecture Diagram
+
+<img width="662" height="841" alt="data-streamer-v3 drawio(1)" src="https://github.com/user-attachments/assets/7c0d86e1-a8cb-454f-bf06-69eba22ce1bb" />
 
 ---
 
@@ -140,3 +145,6 @@ These results are collected from the benchmarking service which simulates reques
 
 
 I did not run the full benchmarking suite for this iteration because nothing that is put under load by the suite was changed. In the future, I will likely add functionality to the benchmark service which will send requests to the analytics endpoints, but I want to wait until I have a standalone analytics API implemented first.
+
+#### v3 Performance Results
+N/A - The REST API endpoints are not a part of the benchmarking tests. These were tested manually (bad practice for a real system, but not the focus of this project).
