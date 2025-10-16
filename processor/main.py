@@ -12,8 +12,9 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 DATABASE_URL = os.getenv("DATABASE_URL", "")
-MAX_CONNS = 50
-MAX_TASKS = 1000
+MAX_CONNS = 50  # Postgres default is 100 total conns, allow 50 for the processor.
+NUM_WORKERS = 75  # 50 db conns + a few workers in the CPU at any given time.
+MAX_TASKS = 1000  # Limit the number of Kafka messages in memory.
 
 # Kafka configuration
 KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "kafka:29092")
@@ -49,9 +50,9 @@ async def main():
     )
     await consumer.start()
 
-    # Enter read loop
-    processor = Processor(consumer, pool, MAX_CONNS, logger)  # type: ignore
-    await processor.process_loop()
+    # Enter processing loop
+    processor = Processor(consumer, MAX_TASKS, NUM_WORKERS, pool, MAX_CONNS, logger)  # type: ignore
+    await processor.start()
 
     # Exit gracefully
     await pool.close()  # type: ignore
