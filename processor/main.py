@@ -12,6 +12,8 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 DATABASE_URL = os.getenv("DATABASE_URL", "")
+MAX_CONNS = 50
+MAX_TASKS = 1000
 
 # Kafka configuration
 KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "kafka:29092")
@@ -48,8 +50,8 @@ async def main():
     await consumer.start()
 
     # Enter read loop
-    processor = Processor(consumer, pool, logger)  # type: ignore
-    await processor.process()
+    processor = Processor(consumer, pool, MAX_CONNS, logger)  # type: ignore
+    await processor.process_loop()
 
     # Exit gracefully
     await pool.close()  # type: ignore
