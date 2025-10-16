@@ -3,7 +3,6 @@ import os
 from aiokafka import AIOKafkaConsumer
 import asyncio
 import json
-import asyncpg
 import sys
 
 from db import get_db_pool

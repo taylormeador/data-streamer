@@ -1,0 +1,13 @@
+{
+  "executionEnvironments": [
+    {
+      "root": "processor"
+    },
+    {
+      "root": "consumer"
+    },
+    {
+      "root": "benchmark"
+    }
+  ]
+}
