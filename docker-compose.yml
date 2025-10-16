@@ -100,11 +100,26 @@ services:
           memory: 256M
     restart: unless-stopped
 
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8001/health || exit 1"]
-      interval: 5s
-      timeout: 3s
-      retries: 3
+  processor:
+    build: ./processor
+    container_name: processor-service
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      DATABASE_URL: ${DATABASE_URL}
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    restart: unless-stopped
 
   benchmark:
     build: ./benchmark
