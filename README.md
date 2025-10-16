@@ -15,6 +15,7 @@ See [API.md](API.md) for complete endpoint documentation.
 | 9-25-25  | [v1 Architecture](#v1-architecture-diagram) | [v1 Results](#v1-performance-results) · [JSON](/performance/v1_results.json) |
 | 9-30-25  | [v2 Architecture](#v2-architecture-diagram) | [v2 Results](#v2-performance-results) · [JSON](/performance/v2_results.json) |
 | 10-12-25 | [v3 Architecture](#v3-architecture-diagram) |                                                                              |
+| 10-16-25 | [v4 Architecture](#v4-architecture-diagram) | [v4 Results](#v4-performance-results) · [JSON](/performance/v4_results.json) |
 
 ---
 
@@ -24,10 +25,10 @@ See [API.md](API.md) for complete endpoint documentation.
 - **v1 (9-25-25)** — Database integration (Postgres) for persistence. Consumer API writes metrics + anomalies to DB with defined schema. Serving analytics endpoints from db queries instead of in-memory data structures.
 - **v2 (9-30-25)** — Add Redis with simple read through caching for /analytics and /device-stats endpoints.
 - **v3 (10-12-25)** - Add REST API (Go) for historical + analytics data.
+- **v4 (10-16-25)** - Split Consumer API into consumer/processor services.
+
 
 ### Tentative Roadmap
-
-  - Split Consumer API into consumer/processor services, add corresponding Kafka topics.
   - Visualization layer (Grafana). Enhanced anomaly detection. Alerting/notification system.
   - API Gateway (centralized routing, authentication/authorization, rate limiting)
   - Split DB into OLTP/OLAP DBs (Postgres + time series DB e.g. TimescaleDB, InfluxDB) and add ETL batch jobs service.
@@ -52,6 +53,10 @@ See [API.md](API.md) for complete endpoint documentation.
 #### v3 Architecture Diagram
 
 <img width="662" height="841" alt="data-streamer-v3 drawio(1)" src="https://github.com/user-attachments/assets/7c0d86e1-a8cb-454f-bf06-69eba22ce1bb" />
+
+#### v4 Architecture Diagram
+
+<img width="607" height="781" alt="data-streamer-v4 drawio" src="https://github.com/user-attachments/assets/f6ded844-d0ab-4ced-bca4-f5b606178656" />
 
 ---
 
@@ -148,3 +153,24 @@ I did not run the full benchmarking suite for this iteration because nothing tha
 
 #### v3 Performance Results
 N/A - The REST API endpoints are not a part of the benchmarking tests. These were tested manually (bad practice for a real system, but not the focus of this project).
+
+#### v4 Performance Results
+| Test Type | Date/Time | Target RPS | Actual RPS | P99 Latency (ms) | Error Rate | Duration (s) |
+|-----------|-----------|------------|------------|------------------|------------|-------------|
+| light_load | 2025-10-16 17:44 | 25 | 24.9 | 8.0 | 0.0% | 60.3 |
+| standard_load | 2025-10-16 17:46 | 100 | 99.5 | 5.7 | 0.0% | 120.0 |
+| high_load | 2025-10-16 17:49 | 250 | 248.3 | 4.6 | 0.0% | 60.0 |
+| ceiling | 2025-10-16 17:50 | 200 | 199.3 | 4.6 | 0.0% | 45.0 |
+| ceiling | 2025-10-16 17:52 | 250 | 249.5 | 4.7 | 0.0% | 45.0 |
+| ceiling | 2025-10-16 17:53 | 300 | 297.2 | 4.3 | 0.0% | 45.0 |
+| ceiling | 2025-10-16 17:54 | 350 | 345.9 | 4.4 | 0.0% | 45.0 |
+| ceiling | 2025-10-16 17:55 | 400 | 394.1 | 4.2 | 0.0% | 45.0 |
+| ceiling | 2025-10-16 17:56 | 450 | 442.0 | 4.5 | 0.0% | 45.0 |
+| ceiling | 2025-10-16 17:57 | 500 | 486.5 | 4.5 | 0.0% | 45.0 |
+| ceiling | 2025-10-16 17:59 | 550 | 528.7 | 4.5 | 0.0% | 45.0 |
+| ceiling | 2025-10-16 18:00 | 600 | 568.7 | 4.7 | 0.0% | 45.0 |
+| ceiling | 2025-10-16 18:01 | 650 | 612.7 | 4.6 | 0.0% | 45.0 |
+| ceiling | 2025-10-16 18:02 | 700 | 637.9 | 4.6 | 0.0% | 45.0 |
+| ceiling | 2025-10-16 18:03 | 750 | 665.8 | 4.3 | 0.0% | 45.0 |
+| ceiling | 2025-10-16 18:04 | 800 | 660.0 | 4.8 | 0.0% | 45.0 |
+| ceiling | 2025-10-16 18:06 | 850 | 667.5 | 4.6 | 0.0% | 45.0 |
