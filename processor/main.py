@@ -6,7 +6,8 @@ import json
 import asyncpg
 import sys
 
-import db
+from db import get_db_pool
+from processor_class import Processor
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -23,50 +24,6 @@ def deserializer(serialized):
     return json.loads(serialized)
 
 
-async def process(consumer: AIOKafkaConsumer, pool: asyncpg.Pool):
-    """Asyncronously reads messages from Kafka topic."""
-    # Consume messages
-    try:
-        async for msg in consumer:
-            query = """
-                INSERT INTO device_readings (
-                    device_id,
-                    metric,
-                    value,
-                    timestamp,
-                    ingestion_timestamp,
-                    message_id,
-                    location,
-                    processed_at
-                ) VALUES (
-                    $1, $2, $3, to_timestamp($4),
-                    to_timestamp($5), $6::uuid, $7, NOW()
-                )
-            """
-
-            msg_values = msg.value
-            values = (
-                msg_values["device_id"],
-                msg_values["metric"],
-                msg_values["value"],
-                msg_values["timestamp"],
-                msg_values["ingestion_timestamp"],
-                msg_values["message_id"],
-                msg_values["location"],
-            )
-
-            try:
-                async with pool.acquire() as connection:
-                    await connection.execute(query, *values)
-                logger.info(f"Stored reading for device {msg_values['device_id']}")
-            except Exception as e:
-                logger.error(f"Failed to store reading: {e}")
-                raise
-
-    finally:
-        await consumer.stop()
-
-
 async def main():
     logger.info("IoT Data Processing Service Starting...")
     logger.info(f"Kafka: {KAFKA_BOOTSTRAP_SERVERS}")
@@ -76,7 +33,7 @@ async def main():
     if not DATABASE_URL:
         logger.fatal("DATABASE_URL not found")
         sys.exit(1)
-    pool = await db.get_db_pool(DATABASE_URL, logger)
+    pool = await get_db_pool(DATABASE_URL, logger)
     logger.info("Connected to database")
 
     # Init consumer
@@ -89,10 +46,11 @@ async def main():
     await consumer.start()
 
     # Enter read loop
-    await process(consumer, pool)
+    processor = Processor(consumer, pool, logger)
+    await processor.process()
 
+    # Exit gracefully
     pool.close()
-
     logger.info("IoT Data Processing Service Stopping...")
 
 
