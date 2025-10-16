@@ -29,9 +29,43 @@ See [API.md](API.md) for complete endpoint documentation.
 
 
 ### Tentative Roadmap
-  - Visualization layer (Grafana). Enhanced anomaly detection. Alerting/notification system.
-  - API Gateway (centralized routing, authentication/authorization, rate limiting)
-  - Split DB into OLTP/OLAP DBs (Postgres + time series DB e.g. TimescaleDB, InfluxDB) and add ETL batch jobs service.
+v5: Observability Foundation
+- Prometheus metrics (all services)
+- Structured logging with correlation IDs
+- Grafana dashboards (system metrics)
+
+v6: Anomaly Detection Service
+- Dedicated service consuming from Kafka
+- Rule-based + ML detection → anomalies table
+- Rich context (type, severity, detection method)
+
+v7: Alerting & Notifications
+- Alert manager integration
+- Slack/email notifications
+- Alert routing rules
+
+v8: Performance Optimization
+- Profile the complete system
+- Batch operations where beneficial
+- Connection pool tuning
+- Worker pool optimization
+- Benchmark improvements
+
+v9: Horizontal Scaling
+- Multiple instances of each service
+- Load balancing
+- Consumer group coordination
+
+v10: Chaos & Reliability Testing
+- Kill services randomly
+- Network partitions
+- Database failures
+- Verify graceful degradation
+
+v11: Advanced Data Architecture
+- OLTP/OLAP split
+- API Gateway
+- Data retention policies
 
 ---
 
