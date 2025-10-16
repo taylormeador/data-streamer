@@ -20,16 +20,13 @@ type Device struct {
 }
 
 type DeviceReading struct {
-	ID              int       `json:"id"`
-	DeviceID        string    `json:"device_id"`
-	Metric          string    `json:"metric"`
-	Value           float64   `json:"value"`
-	Timestamp       time.Time `json:"timestamp"`
-	Location        string    `json:"location"`
-	AnomalyDetected bool      `json:"anomaly_detected"`
-	RollingAvg      float64   `json:"rolling_avg"`
-	DeviationPct    float64   `json:"deviation_pct"`
-	ProcessedAt     time.Time `json:"processed_at"`
+	ID          int       `json:"id"`
+	DeviceID    string    `json:"device_id"`
+	Metric      string    `json:"metric"`
+	Value       float64   `json:"value"`
+	Timestamp   time.Time `json:"timestamp"`
+	Location    string    `json:"location"`
+	ProcessedAt time.Time `json:"processed_at"`
 }
 
 type DeviceModel struct {
@@ -43,8 +40,7 @@ func (d DeviceModel) GetAllDevices(ctx context.Context, activeOnly bool, limit i
             device_id,
             COUNT(*) as message_count,
             AVG(value) as avg_value,
-            MAX(processed_at) as last_seen,
-            COUNT(*) FILTER (WHERE anomaly_detected = true) as anomaly_count
+            MAX(processed_at) as last_seen
         FROM device_readings
     `
 
@@ -75,7 +71,6 @@ func (d DeviceModel) GetAllDevices(ctx context.Context, activeOnly bool, limit i
 			&device.MessageCount,
 			&device.AvgValue,
 			&device.LastSeen,
-			&device.AnomalyCount,
 		)
 		if err != nil {
 			return nil, err
@@ -103,8 +98,7 @@ func (d DeviceModel) GetDevice(ctx context.Context, deviceID string) (*Device, e
             device_id,
             COUNT(*) as message_count,
             AVG(value) as avg_value,
-            MAX(processed_at) as last_seen,
-            COUNT(*) FILTER (WHERE anomaly_detected = true) as anomaly_count
+            MAX(processed_at) as last_seen
         FROM device_readings
         WHERE device_id = $1
         GROUP BY device_id
@@ -116,7 +110,6 @@ func (d DeviceModel) GetDevice(ctx context.Context, deviceID string) (*Device, e
 		&device.MessageCount,
 		&device.AvgValue,
 		&device.LastSeen,
-		&device.AnomalyCount,
 	)
 	if err != nil {
 		switch {
@@ -140,9 +133,6 @@ func (d DeviceModel) GetDeviceReadings(ctx context.Context, deviceID string, met
 			value,
 			timestamp,
 			location,
-            anomaly_detected,
-			rolling_avg,
-			deviation_pct,
 			processed_at
         FROM device_readings
         WHERE device_id = $1
@@ -190,9 +180,6 @@ func (d DeviceModel) GetDeviceReadings(ctx context.Context, deviceID string, met
 			&reading.Value,
 			&reading.Timestamp,
 			&reading.Location,
-			&reading.AnomalyDetected,
-			&reading.RollingAvg,
-			&reading.DeviationPct,
 			&reading.ProcessedAt,
 		)
 		if err != nil {
@@ -219,9 +206,6 @@ func (d DeviceModel) GetDeviceAnomalies(ctx context.Context, deviceID string, st
             value,
             timestamp,
             location,
-            anomaly_detected,
-            rolling_avg,
-            deviation_pct,
             processed_at
         FROM device_readings
         WHERE device_id = $1 AND anomaly_detected = true
@@ -263,9 +247,6 @@ func (d DeviceModel) GetDeviceAnomalies(ctx context.Context, deviceID string, st
 			&reading.Value,
 			&reading.Timestamp,
 			&reading.Location,
-			&reading.AnomalyDetected,
-			&reading.RollingAvg,
-			&reading.DeviationPct,
 			&reading.ProcessedAt,
 		)
 		if err != nil {

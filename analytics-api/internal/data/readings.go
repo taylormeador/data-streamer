@@ -22,9 +22,6 @@ func (r ReadingModel) GetReadings(ctx context.Context, metric string, anomalyOnl
             value,
             timestamp,
             location,
-            anomaly_detected,
-            rolling_avg,
-            deviation_pct,
             processed_at
         FROM device_readings
         WHERE 1=1
@@ -76,9 +73,6 @@ func (r ReadingModel) GetReadings(ctx context.Context, metric string, anomalyOnl
 			&reading.Value,
 			&reading.Timestamp,
 			&reading.Location,
-			&reading.AnomalyDetected,
-			&reading.RollingAvg,
-			&reading.DeviationPct,
 			&reading.ProcessedAt,
 		)
 		if err != nil {
@@ -105,9 +99,6 @@ func (r ReadingModel) GetLatestReadings(ctx context.Context, metric string, acti
             value,
             timestamp,
             location,
-            anomaly_detected,
-            rolling_avg,
-            deviation_pct,
             processed_at
         FROM device_readings
         WHERE 1=1
@@ -147,9 +138,6 @@ func (r ReadingModel) GetLatestReadings(ctx context.Context, metric string, acti
 			&reading.Value,
 			&reading.Timestamp,
 			&reading.Location,
-			&reading.AnomalyDetected,
-			&reading.RollingAvg,
-			&reading.DeviationPct,
 			&reading.ProcessedAt,
 		)
 		if err != nil {
@@ -176,9 +164,6 @@ func (r ReadingModel) GetAnomalies(ctx context.Context, metric string, start, en
             value,
             timestamp,
             location,
-            anomaly_detected,
-            rolling_avg,
-            deviation_pct,
             processed_at
         FROM device_readings
         WHERE anomaly_detected = true
@@ -226,9 +211,6 @@ func (r ReadingModel) GetAnomalies(ctx context.Context, metric string, start, en
 			&reading.Value,
 			&reading.Timestamp,
 			&reading.Location,
-			&reading.AnomalyDetected,
-			&reading.RollingAvg,
-			&reading.DeviationPct,
 			&reading.ProcessedAt,
 		)
 		if err != nil {

@@ -8,10 +8,9 @@ import (
 )
 
 type SystemStats struct {
-	TotalReadings  int        `json:"total_readings"`
-	UniqueDevices  int        `json:"unique_devices"`
-	TotalAnomalies int        `json:"total_anomalies"`
-	LatestReading  *time.Time `json:"latest_reading,omitempty"`
+	TotalReadings int        `json:"total_readings"`
+	UniqueDevices int        `json:"unique_devices"`
+	LatestReading *time.Time `json:"latest_reading,omitempty"`
 }
 
 type SystemHealth struct {
@@ -32,7 +31,6 @@ func (s SystemModel) GetSystemStats(ctx context.Context) (*SystemStats, error) {
         SELECT 
             COUNT(*) as total_readings,
             COUNT(DISTINCT device_id) as unique_devices,
-            COUNT(*) FILTER (WHERE anomaly_detected = true) as total_anomalies,
             MAX(processed_at) as latest_reading
         FROM device_readings
     `
@@ -40,7 +38,6 @@ func (s SystemModel) GetSystemStats(ctx context.Context) (*SystemStats, error) {
 	err := s.db.QueryRow(ctx, query).Scan(
 		&stats.TotalReadings,
 		&stats.UniqueDevices,
-		&stats.TotalAnomalies,
 		&stats.LatestReading,
 	)
 	if err != nil {
