@@ -4,7 +4,19 @@ import logging
 from aiokafka import AIOKafkaConsumer
 import asyncpg
 import asyncio
-from metrics import messages_processed
+import time
+from metrics import (
+    messages_processed,
+    queue_depth,
+    queue_max_size,
+    workers_busy,
+    workers_total,
+    processing_duration_seconds,
+    processing_errors,
+    db_pool_connections,
+    db_pool_connections_max,
+    db_write_duration_seconds,
+)
 
 
 class Processor:
@@ -25,6 +37,11 @@ class Processor:
         self._db_semaphore = asyncio.Semaphore(max_conns)
         self._logger = logger
 
+        # Set Prometheus metrics.
+        queue_max_size.set(max_tasks)
+        workers_total.set(num_workers)
+        db_pool_connections_max.set(max_conns)
+
     async def start(self):
         """Init workers and enter loop."""
         for i in range(self._num_workers):
@@ -42,6 +59,7 @@ class Processor:
         try:
             async for msg in self._consumer:
                 await self._queue.put(msg)
+                queue_depth.set(self._queue.qsize())
         finally:
             await self._consumer.stop()
 
@@ -77,7 +95,13 @@ class Processor:
         try:
             async with self._db_semaphore:  # Limit number of db conns to avoid exhausting pool
                 async with self._db_pool.acquire() as connection:
+                    db_pool_connections.inc()
+                    start = time.time()
                     await connection.execute(query, *values)
+                    end = time.time()
+                    db_pool_connections.dec()
+                    db_write_duration_seconds.observe(end - start)
+
             messages_processed.inc()
             self._logger.info(f"Stored reading for device {msg_values['device_id']}")
         except Exception as e:
@@ -89,15 +113,24 @@ class Processor:
         self._logger.info(f"Starting worker #{worker_id}...")
         while True:
             msg = await self._queue.get()
+            queue_depth.set(self._queue.qsize())
             if msg is None:
                 break
+
+            workers_busy.inc()
+            start = time.time()
 
             try:
                 await self._process_message(msg)
             except Exception as e:
                 self._logger.error(f"Worker #{worker_id}: Error processing: {e}")
+                processing_errors.inc()
             finally:
                 self._queue.task_done()
+                queue_depth.set(self._queue.qsize())
+                workers_busy.dec()
+                end = time.time()
+                processing_duration_seconds.observe(end - start)
 
         # TODO This never happens for now.
         # Consider implementing this by sending a specific payload
