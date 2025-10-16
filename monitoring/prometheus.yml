@@ -10,3 +10,7 @@ scrape_configs:
   - job_name: 'processor'
     static_configs:
       - targets: ['processor:8080']
+
+  - job_name: 'analytics-api'
+    static_configs:
+      - targets: ['analytics-api:8003']
