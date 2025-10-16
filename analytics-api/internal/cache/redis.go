@@ -7,6 +7,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 	"github.com/taylormeador/data-streamer/analytics-api/internal/data"
+	"github.com/taylormeador/data-streamer/analytics-api/internal/metrics"
 )
 
 type Cache struct {
@@ -43,11 +44,13 @@ func (c *Cache) GetReadings(ctx context.Context, key string, ttl time.Duration, 
 	if err == nil {
 		var readings []*data.DeviceReading
 		if err := json.Unmarshal([]byte(cached), &readings); err == nil {
+			metrics.CacheHits.Inc()
 			return readings, nil
 		}
 	}
 
 	// Cache miss - fetch from DB
+	metrics.CacheMisses.Inc()
 	readings, err := fetchFn()
 	if err != nil {
 		return nil, err
