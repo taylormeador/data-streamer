@@ -4,6 +4,8 @@ import (
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func (app *application) routes() http.Handler {
@@ -29,5 +31,8 @@ func (app *application) routes() http.Handler {
 	// Anomalies endpoint
 	router.HandlerFunc(http.MethodGet, "/v1/anomalies", app.getAnomaliesHandler)
 
-	return app.recoverPanic(router)
+	// Metrics (Prometheus)
+	router.Handler(http.MethodGet, "/metrics", promhttp.Handler())
+
+	return app.recoverPanic(app.captureMetrics(router))
 }
