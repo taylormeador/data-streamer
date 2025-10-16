@@ -3,7 +3,7 @@ import asyncio
 import logging
 
 
-async def get_db_pool(dsn: str, logger: logging.Logger):
+async def get_db_pool(dsn: str, logger: logging.Logger) -> asyncpg.Pool:
     max_retries = 3
     retry_delay = 2
     for attempt in range(max_retries):
@@ -21,3 +21,5 @@ async def get_db_pool(dsn: str, logger: logging.Logger):
                 f"Database connection attempt {attempt + 1} failed: {e}. Retrying in {retry_delay}s..."
             )
             await asyncio.sleep(retry_delay)
+
+    raise RuntimeError("Exhausted all retry attempts without connecting to database")

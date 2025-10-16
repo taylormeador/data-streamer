@@ -32,8 +32,11 @@ async def main():
     if not DATABASE_URL:
         logger.fatal("DATABASE_URL not found")
         sys.exit(1)
-    pool = await get_db_pool(DATABASE_URL, logger)
-    logger.info("Connected to database")
+    try:
+        pool = await get_db_pool(DATABASE_URL, logger)
+        logger.info("Connected to database")
+    except Exception as e:
+        logger.fatal(f"Unable to connect to database: {e}")
 
     # Init consumer
     consumer = AIOKafkaConsumer(
@@ -45,11 +48,11 @@ async def main():
     await consumer.start()
 
     # Enter read loop
-    processor = Processor(consumer, pool, logger)
+    processor = Processor(consumer, pool, logger)  # type: ignore
     await processor.process()
 
     # Exit gracefully
-    pool.close()
+    await pool.close()  # type: ignore
     logger.info("IoT Data Processing Service Stopping...")
 
 
