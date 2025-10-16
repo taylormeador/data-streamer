@@ -4,6 +4,7 @@ import logging
 from aiokafka import AIOKafkaConsumer
 import asyncpg
 import asyncio
+from metrics import messages_processed
 
 
 class Processor:
@@ -77,6 +78,7 @@ class Processor:
             async with self._db_semaphore:  # Limit number of db conns to avoid exhausting pool
                 async with self._db_pool.acquire() as connection:
                     await connection.execute(query, *values)
+            messages_processed.inc()
             self._logger.info(f"Stored reading for device {msg_values['device_id']}")
         except Exception as e:
             self._logger.error(f"Failed to store reading: {e}")
