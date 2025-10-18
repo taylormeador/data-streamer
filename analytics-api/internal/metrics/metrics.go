@@ -36,4 +36,25 @@ var (
 			Help: "Total cache misses",
 		},
 	)
+
+	DBQueriesTotal = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "db_queries_total",
+			Help: "Total DB queries",
+		},
+	)
+
+	DBQueryDurationSeconds = promauto.NewHistogram(
+		prometheus.HistogramOpts{
+			Name: "db_query_duration_seconds",
+			Help: "DB query duration",
+		},
+	)
+
+	DBErrorsTotal = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "db_errors_total",
+			Help: "Total DB errors",
+		},
+	)
 )
