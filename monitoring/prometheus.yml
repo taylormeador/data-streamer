@@ -7,6 +7,10 @@ scrape_configs:
     static_configs:
       - targets: ['localhost:9090']
 
+  - job_name: 'producer'
+    static_configs:
+      - targets: ['producer:8000']
+
   - job_name: 'processor'
     static_configs:
       - targets: ['processor:8080']
