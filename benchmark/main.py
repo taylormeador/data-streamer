@@ -7,8 +7,7 @@ import random
 import statistics
 import logging
 from typing import List, Dict, Any, Optional
-from asyncio_throttle import Throttler
-import json
+from asyncio_throttle.throttler import Throttler
 
 logging.basicConfig(level=logging.INFO)
 
