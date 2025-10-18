@@ -14,11 +14,6 @@ kafka_publish_duration = Histogram(
     "Time to publish message to Kafka",
 )
 
-# Track enrichment duration
-enrichment_duration = Histogram(
-    f"{prefix}_enrichment_duration_seconds", "Time spent enriching event"
-)
-
 # Track errors
 kafka_publish_errors = Counter(
     f"{prefix}_kafka_publish_errors_total", "Failed Kafka publishes"

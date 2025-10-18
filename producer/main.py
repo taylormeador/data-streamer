@@ -57,11 +57,9 @@ async def ingest_metric(event: TelemetryEvent):
     Ingests a telemetry event and publishes to Kafka.
     """
     # Add minimal enrichment to create some CPU work
-    enrich_start = time.time()
     enriched_event = event.model_copy()
     enriched_event.message_id = str(uuid.uuid4())
     enriched_event.ingestion_timestamp = time.time()
-    metrics.enrichment_duration.observe(time.time() - enrich_start)
 
     logging.info(f"Received event: {enriched_event.model_dump()}")
 
