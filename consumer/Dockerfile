@@ -12,7 +12,7 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY main.py .
+COPY *.py .
 
 # Use -u for unbuffered output so logs show up immediately
 CMD ["python", "-u", "main.py"]
