@@ -51,6 +51,12 @@ async def main():
     try:
         while True:
             message_batch = await consumer.getmany(timeout_ms=POLL_TIMEOUT)
+            if not message_batch:
+                # This just creates an infinite loop instead of crashing.
+                # In a real system we could check for interrupt or send heartbeat or whatever else here.
+                logger.debug("No messages received, continuing...")
+                continue
+
             async with producer.transaction():
                 commit_offsets = {}
                 input_messages = []
