@@ -1,13 +1,12 @@
 import asyncio
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
-import logging
 import os
 import json
 
 import data
+from shared.elk_logging import setup_logging
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = setup_logging("producer-service")
 
 # Kafka configuration
 KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "kafka:29092")

@@ -90,7 +90,9 @@ services:
       retries: 3
 
   consumer:
-    build: ./consumer
+    build:
+      context: .
+      dockerfile: consumer/Dockerfile
     container_name: consumer-service
     depends_on:
       kafka:
