@@ -3,8 +3,11 @@ from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
 import logging
 import os
 import json
+import time
+from prometheus_client import start_http_server
 
 import data
+import metrics
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -18,12 +21,18 @@ OUTPUT_TOPIC = "iot-sensor-data-validated"
 
 POLL_TIMEOUT = 60 * 1000
 
+METRICS_PORT = int(os.getenv("METRICS_PORT", "8000"))
+
 
 def serializer(data: dict):
     return json.dumps(data).encode("utf-8")
 
 
 async def main():
+    # Start Prometheus metrics server
+    start_http_server(METRICS_PORT)
+    logger.info(f"Metrics server started on port {METRICS_PORT}")
+
     logger.info("IoT Data Ingestion Service Starting...")
     logger.info(f"Kafka: {KAFKA_BOOTSTRAP_SERVERS}")
     logger.info(f"Input: {INPUT_TOPIC} → Output: {OUTPUT_TOPIC}")
@@ -61,24 +70,66 @@ async def main():
                 commit_offsets = {}
                 input_messages = []
 
+                # Collect all messages from batch
                 for topic, messages in message_batch.items():
                     input_messages.extend(messages)
                     commit_offsets[topic] = messages[-1].offset + 1
-
-                validated_messages = data.validate_batch(input_messages, logger)
-                output_messages = data.enrich_batch(validated_messages)
-                for message in output_messages:
-                    logger.info(f"sending message with key {message.key}")
-                    await producer.send(
-                        OUTPUT_TOPIC,
-                        value=message.value,
-                        key=message.key,
+                    metrics.kafka_messages_consumed.labels(topic=topic).inc(
+                        len(messages)
                     )
 
+                # Track batch size
+                batch_size = len(input_messages)
+                metrics.batch_size.observe(batch_size)
+                metrics.messages_in_flight.set(batch_size)
+
+                logger.info(f"Processing batch of {batch_size} messages")
+
+                # Validate + enrich messages
+                validated_messages = data.validate_batch(input_messages, logger)
+                output_messages = data.enrich_batch(validated_messages)
+
+                logger.info(f"Publishing {len(output_messages)} validated messages")
+
+                # Publish messages
+                for message in output_messages:
+                    publish_start = time.time()
+
+                    try:
+                        logger.debug(f"sending message with key {message.key}")
+                        await producer.send(
+                            OUTPUT_TOPIC,
+                            value=message.value,
+                            key=message.key,
+                        )
+
+                        # Track successful publish
+                        metrics.kafka_messages_published.labels(
+                            topic=OUTPUT_TOPIC
+                        ).inc()
+
+                        # Track publish duration
+                        publish_duration = time.time() - publish_start
+                        metrics.kafka_publish_duration.observe(publish_duration)
+
+                    except Exception as e:
+                        logger.error(f"Failed to publish message: {e}")
+                        metrics.kafka_publish_errors.labels(topic=OUTPUT_TOPIC).inc()
+                        raise
+
+                # Commit offsets + clear gauge
                 await producer.send_offsets_to_transaction(commit_offsets, GROUP_ID)
+                metrics.messages_in_flight.set(0)
+
+                logger.info(
+                    f"Batch complete: {len(validated_messages)}/{batch_size} messages validated"
+                )
 
     except KeyboardInterrupt:
         logger.info("Shutting down...")
+    except Exception as e:
+        logger.error(f"Fatal error: {e}", exc_info=True)
+        raise
     finally:
         await consumer.stop()
         await producer.stop()
