@@ -64,10 +64,14 @@ services:
     depends_on:
       kafka:
         condition: service_healthy
+      logstash:
+        condition: service_healthy
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: ${REDIS_URL}
+      LOGSTASH_HOST: logstash
+      LOGSTASH_PORT: 5000
     ports:
       - "8000:8000"
     deploy:
@@ -91,8 +95,12 @@ services:
     depends_on:
       kafka:
         condition: service_healthy
+      logstash:
+        condition: service_healthy
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      LOGSTASH_HOST: logstash
+      LOGSTASH_PORT: 5000
     deploy:
       resources:
         limits:
@@ -111,10 +119,14 @@ services:
         condition: service_healthy
       postgres:
         condition: service_healthy
+      logstash:
+        condition: service_healthy
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       DATABASE_URL: ${DATABASE_URL}
       METRICS_PORT: 8080
+      LOGSTASH_HOST: logstash
+      LOGSTASH_PORT: 5000
     deploy:
       resources:
         limits:
@@ -134,6 +146,8 @@ services:
     environment:
       - PRODUCER_URL=http://producer:8000
       - ANALYTICS_API_URL=http://analytics-api:8003
+      - LOGSTASH_HOST=logstash
+      - LOGSTASH_PORT=5000
     ports:
       - "8002:8002"
     deploy:
@@ -165,10 +179,14 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+      logstash:
+        condition: service_healthy
     environment:
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: ${REDIS_URL}
       PORT: 8003
+      LOGSTASH_HOST: logstash
+      LOGSTASH_PORT: 5000
     ports:
       - "8003:8003"
     deploy:
@@ -185,6 +203,7 @@ services:
       timeout: 3s
       retries: 3
 
+  # Monitoring/Metrics
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
@@ -222,5 +241,84 @@ services:
           cpus: '0.5'
           memory: 256M
 
+  # ELK Stack
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.11.0
+    container_name: logstash
+    volumes:
+      - ./elk/logstash/pipeline:/usr/share/logstash/pipeline
+      - ./elk/logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml
+    ports:
+      - "5000:5000"
+      - "9600:9600"
+    environment:
+      - "LS_JAVA_OPTS=-Xms256m -Xmx256m"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9600 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    container_name: kibana
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5601/api/status || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
 volumes:
   grafana-data:
+  elasticsearch-data:
